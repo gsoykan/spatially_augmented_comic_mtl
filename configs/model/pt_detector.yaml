@@ -1,0 +1,6 @@
+_target_: src.models.pt_detector_module.PtDetectorLitModule
+
+model_name: fasterrcnn_resnet50_fpn
+num_classes: 6
+lr: 0.001
+weight_decay: 0.0005

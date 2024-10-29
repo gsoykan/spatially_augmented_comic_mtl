@@ -1,0 +1,15 @@
+_target_: src.models.pml_id_net_fine_tuned_ssl_backbone_face_body_module.PMLIdNetFineTunedSSLBackboneFaceBodyLitModule
+
+ssl_ckpt_face: null
+ssl_ckpt_body: null
+id_latent_dim: 128
+backbone_latent_dim_face: 512
+backbone_latent_dim_body: 512
+ssl_backbone_face: null
+ssl_backbone_body: null
+lr: 0.001
+weight_decay: 0.01
+scheduler_gamma: 0.95
+use_linear: True
+use_dropout: False
+only_mode: null

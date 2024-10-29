@@ -1,0 +1,83 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /datamodule: dcm_detection.yaml
+  - override /model: pt_detector.yaml
+  - override /callbacks: wandb_watch_model.yaml # default.yaml - wandb.yaml - wandb_no_upload.yaml - wandb_without_pred.yaml - wandb_watch_model.yaml
+  - override /logger: wandb.yaml # null  - wandb.yaml - csv.yaml
+  - override /trainer: default.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+# name of the run determines folder name in logs
+name: "dcm_detection"
+
+seed: 12345
+
+trainer:
+  gpus: 1
+  resume_from_checkpoint: null
+  num_sanity_val_steps: 0
+  min_epochs: 1
+  max_epochs: 40
+  gradient_clip_val: 0.5
+
+model:
+  model_name: maskrcnn_resnet50_fpn_v2
+  num_classes: 6
+  lr: 0.001
+  weight_decay: 0.01
+  log_relation_score_every_n_epoch: 1
+
+  enable_encapsulation_box_masking: True
+  use_edge_maps: False
+  # relation network configs
+  relation_network_representation_size: 128
+  relation_network_first_layer_type: fast_rcnn_conv_v2_regularized # linear, , identity, fast_rcnn_conv_v8_mha_box, fast_rcnn_conv_v2, pair_triple_wise_conv2d, pair_triple_wise_cat_and_fast_rcnn_conv_v2, mha_box_dot_product
+  relation_network_feat_embedding_type: null # 'dynamic', 'positional'
+  relation_network_encapsulation_box_masks_strategy: null # element_wise - cat_and_conv, enable_encapsulation_box_masking=True olmalı...
+  use_object_relation_modules: False
+  box_head_output_strategy: null # cat_and_linear, linear_pair_triple_as_x, merge_cat_and_linear_with_x, linear_and_sum_sum, identity_and_sum_sum
+  # sampling configs
+  to_matcher_iou_threshold_addition: 0.0
+  generate_sliding_window_negative_samples: True # 5 samples
+  generate_mirrored_by_bubble_center_negative_samples: True # 5 samples
+  use_negative_links: True # 10 samples - now it is mixed...
+  base_sample_count: 76
+  additional_neg_sample_count: 150 # 0 - 10 - 20 - 30 - 50 - 76 - 100 - 150
+  use_filtered_boxes_for_pair_pool: False
+  select_samples_by_box_intersection_scores: True
+  filter_body_intersected_generated_negative_face_samples: True
+  balance_face_char_sample_counts: True
+
+datamodule:
+  data_dir: ${data_dir} # data_dir is specified in config.yaml
+  train_val_test_split: [0, -50, -25]
+  img_dims_hw: [800, null]
+  use_instance_masks: True
+  use_aug_for_training: False
+  batch_size: 8
+  num_workers: 5
+  pin_memory: True
+  shuffle: True
+
+callbacks:
+  early_stopping:
+    patience: 10
+    monitor: "val/face/rel_f1" # name of the logged metric which determines when model is improving
+    mode: "max" # "max" means higher metric value is better, can be also "min"
+
+  # this is just for hparams search
+  model_checkpoint:
+    monitor: "val/face/rel_f1" # name of the logged metric which determines when model is improving
+    mode: "max" # "max" means higher metric value is better, can be also "min"
+    save_top_k: 1
+    save_last: True
+
+logger:
+  wandb:
+    tags: ["${name}", "dcm_detection", "pt_detector"]

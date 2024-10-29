@@ -1,0 +1,59 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /datamodule: dcm_detection.yaml
+  - override /model: pt_detector.yaml
+  - override /callbacks: default.yaml # default.yaml - wandb.yaml - wandb_no_upload.yaml
+  - override /logger: csv.yaml # null  - wandb.yaml
+  - override /trainer: default.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+# name of the run determines folder name in logs
+name: "dcm_detection"
+
+seed: 12345
+
+trainer:
+  gpus: 1
+  resume_from_checkpoint: null
+  num_sanity_val_steps: 0
+  min_epochs: 1
+  max_epochs: 200
+  gradient_clip_val: 0.5
+
+model:
+  model_name: fasterrcnn_resnet50_fpn
+  num_classes: 6
+  lr: 0.001
+  weight_decay: 0.01
+  use_filtered_boxes_for_pair_pool: True
+
+datamodule:
+  data_dir: ${data_dir} # data_dir is specified in config.yaml
+  train_val_test_split: [ -100, -20, -10 ]
+  img_dims_hw: [ 320, 240 ]
+  batch_size: 2
+  num_workers: 0
+  pin_memory: False
+
+callbacks:
+  early_stopping:
+    patience: 10
+    monitor: "val/loss" # name of the logged metric which determines when model is improving
+    mode: "min" # "max" means higher metric value is better, can be also "min"
+
+  # this is just for hparams search
+  model_checkpoint:
+    monitor: "val/loss" # name of the logged metric which determines when model is improving
+    mode: "min" # "max" means higher metric value is better, can be also "min"
+    save_top_k: 1
+    save_last: True
+
+logger:
+  wandb:
+    tags: [ "${name}", "dcm_detection", "pt_detector" ]
